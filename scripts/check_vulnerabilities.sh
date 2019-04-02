@@ -52,7 +52,7 @@ NUM_WAITS=0
 MAX_WAITS=6
 
 # Wait for scan to begin
-until gcloud beta container images describe gcr.io/vic-cd-demo/binauthz-tools@sha256:c4c7a459dd45f35c0c7dbe84ddcffd7ab9cd1161d43b8ef3fbeaf41e037a3ed5 --format 'value(discovery_summary.discovery.discovered.analysisStatus)' --show-package-vulnerability || [ ${NUM_WAITS} -eq ${MAX_WAITS} ]; do
+until gcloud beta container images describe ${IMAGE_PATH} --format 'value(discovery_summary.discovery.discovered.analysisStatus)' --show-package-vulnerability || [ ${NUM_WAITS} -eq ${MAX_WAITS} ]; do
   sleep ${SLEEP_WAIT_FOR_SCAN}
   ((NUM_WAITS++))
 done
