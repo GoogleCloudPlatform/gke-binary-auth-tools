@@ -69,7 +69,7 @@ mkdir -p ~/.gnupg
 echo allow-loopback-pinentry > ~/.gnupg/gpg-agent.conf
 COMMON_FLAGS="--no-tty --pinentry-mode loopback  --passphrase-file ${NAME}.pass"
 gpg2 $COMMON_FLAGS --import ${NAME}_sec.gpg
-gpg2 $COMMON_FLAGS --output generated_signature.pgp --armor --sign generated_payload.json
+gpg2 $COMMON_FLAGS --output generated_signature.pgp --local-user $(cat ${NAME}.fpr) --armor --sign generated_payload.json
 
 # Upload attestation
 gcloud beta container binauthz attestations create \
