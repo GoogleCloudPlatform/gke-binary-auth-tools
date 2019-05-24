@@ -67,6 +67,7 @@ steps:
   - 'CLOUDSDK_COMPUTE_ZONE=$_COMPUTE_ZONE'
   - 'CLOUDSDK_CONTAINER_CLUSTER=$_STAGING_CLUSTER'
 
+# This effectively pauses the build for up to 500s until the QA attestions is applied.
 - name: 'gcr.io/cloud-builders/gcloud'
   id: Wait for QA Attestation
   entrypoint: /bin/sh
