@@ -28,15 +28,21 @@ Options:
   -n <attestor name>   Name to use for attestor
   -p <project ID>      Project ID
   -i <image path>      Full image path including sha (gcr.io/my-project/image-name@sha256:....)
+  -b <bucket name>     Name of the GCS Bucket with KMS decryption keys
+  -r <keyring name>    Name of the KMS keyring decryption key
+  -k <key name>        Name of the KMS decryption key
   -h                   This help screen"
 }
 
-while getopts 'hn:p:i:' flag; do
+while getopts 'hn:p:i:b:r:k:' flag; do
   case ${flag} in
     h) usage ;;
     p) PROJECT_ID="${OPTARG}" ;;
     i) IMAGE_PATH="${OPTARG}" ;;
     n) NAME="${OPTARG}" ;;
+    b) BUCKET_NAME="${OPTARG}" ;;
+    r) KEYRING="${OPTARG}" ;;
+    k) KEY="${OPTARG}" ;;        
     *) die "invalid option found" ;;
   esac
 done
@@ -59,23 +65,41 @@ then
    die "Project must be set"
 fi
 
+if [ -z "$BUCKET_NAME" ]
+then
+   usage
+   die "BUCKET_NAME must be set"
+fi
+
+if [ -z "$KEYRING" ]
+then
+   usage
+   die "KEYRING must be set"
+fi
+
+if [ -z "$KEY" ]
+then
+   usage
+   die "KEY must be set"
+fi
+
 if gcloud beta container binauthz attestations list --artifact-url $IMAGE_PATH --attestor $NAME --format json | jq '.[0].kind' | grep ATTESTATION; then
 echo "Image has already been attested."
 exit 0
 fi
 
 # Get signing keys
-gsutil cp gs://$PROJECT_ID-${NAME}/${NAME}.fpr gs://$PROJECT_ID-${NAME}/${NAME}_sec.gpg.enc gs://$PROJECT_ID-${NAME}/${NAME}.pass.enc .
-gcloud kms decrypt --ciphertext-file=${NAME}_sec.gpg.enc \
-                --plaintext-file=${NAME}_sec.gpg \
+gsutil cp gs://${BUCKET_NAME}/${NAME}.fpr gs://${BUCKET_NAME}/${NAME}.gpg.enc gs://${BUCKET_NAME}/${NAME}.pass.enc .
+gcloud kms decrypt --ciphertext-file=${NAME}.gpg.enc \
+                --plaintext-file=${NAME}.gpg \
                 --location=global \
-                --keyring=attestors \
-                --key=attestors
+                --keyring=${KEYRING} \
+                --key=${KEY}
 gcloud kms decrypt --ciphertext-file=${NAME}.pass.enc \
                 --plaintext-file=${NAME}.pass \
                 --location=global \
-                --keyring=attestors \
-                --key=attestors
+                --keyring=${KEYRING} \
+                --key=${KEY}
 gcloud beta container binauthz create-signature-payload \
     --artifact-url=${IMAGE_PATH} > generated_payload.json
 
@@ -83,7 +107,7 @@ gcloud beta container binauthz create-signature-payload \
 mkdir -p ~/.gnupg
 echo allow-loopback-pinentry > ~/.gnupg/gpg-agent.conf
 COMMON_FLAGS="--no-tty --pinentry-mode loopback  --passphrase-file ${NAME}.pass"
-gpg2 $COMMON_FLAGS --import ${NAME}_sec.gpg
+gpg2 $COMMON_FLAGS --import ${NAME}.gpg
 gpg2 $COMMON_FLAGS --output generated_signature.pgp --local-user $(cat ${NAME}.fpr) --armor --sign generated_payload.json
 
 # Upload attestation
@@ -92,3 +116,12 @@ gcloud beta container binauthz attestations create \
     --attestor="projects/${PROJECT_ID}/attestors/${NAME}" \
     --signature-file=generated_signature.pgp \
     --pgp-key-fingerprint="$(cat ${NAME}.fpr)"
+
+# Clean up the keys and generated artifacts
+rm generated_signature.pgp
+rm generated_payload.json
+rm ${NAME}.fpr
+rm ${NAME}.pass
+rm ${NAME}.pass.enc
+rm ${NAME}.gpg
+rm ${NAME}.gpg.enc
