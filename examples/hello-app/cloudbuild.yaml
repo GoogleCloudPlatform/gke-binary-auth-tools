@@ -45,7 +45,7 @@ steps:
   - -c
   - |
      FULLY_QUALIFIED_IMAGE=$(gcloud container images describe --format 'value(image_summary.fully_qualified_digest)' gcr.io/$PROJECT_ID/hello-app:$SHORT_SHA)
-     /scripts/create_attestation.sh -n $_NOTE_ID -p $PROJECT_ID -i $$FULLY_QUALIFIED_IMAGE -b $PROJECT_ID-keys -r $_KMS_KEYRING  -k $_KMS_KEY
+     /scripts/create_attestation.sh -n $_VULNZ_NOTE_ID -p $PROJECT_ID -i $$FULLY_QUALIFIED_IMAGE -b $PROJECT_ID-keys -r $_KMS_KEYRING  -k $_KMS_KEY
 
 - name: 'gcr.io/cloud-builders/gcloud'
   id: Generate k8s manifest
@@ -76,7 +76,7 @@ steps:
   - |
      FULLY_QUALIFIED_IMAGE=$(gcloud container images describe --format 'value(image_summary.fully_qualified_digest)' gcr.io/$PROJECT_ID/hello-app:$SHORT_SHA)
      
-     until gcloud beta container binauthz attestations list --attestor=qa_attestor --artifact-url=$${FULLY_QUALIFIED_IMAGE} | grep qa_attestor; do
+     until gcloud beta container binauthz attestations list --attestor=$_QA_NOTE_ID --artifact-url=$${FULLY_QUALIFIED_IMAGE} | grep $_QA_NOTE_ID; do
        sleep 30
      done
 
