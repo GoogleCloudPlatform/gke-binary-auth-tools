@@ -54,15 +54,38 @@ steps:
   - '-c'
   - |
      DIGEST=$(gcloud container images describe --format 'value(image_summary.digest)' gcr.io/$PROJECT_ID/hello-app:$SHORT_SHA)
-     sed "s/GOOGLE_CLOUD_PROJECT/${PROJECT_ID}/g" kubernetes.yaml.tpl | \
-     sed "s/DIGEST/$${DIGEST}/g" > kubernetes.yaml
+     sed "s/GOOGLE_CLOUD_PROJECT/${PROJECT_ID}/g" kubernetes/deployment.yaml.tpl | \
+     sed "s/DIGEST/$${DIGEST}/g" > kubernetes/deployment.yaml
 
 - name: 'gcr.io/cloud-builders/kubectl'
-  id: Deploy to GKE
+  id: Deploy to Staging
   args:
   - 'apply'
   - '-f'
-  - 'kubernetes.yaml'
+  - 'kubernetes'
   env:
   - 'CLOUDSDK_COMPUTE_ZONE=$_COMPUTE_ZONE'
-  - 'CLOUDSDK_CONTAINER_CLUSTER=$_K8S_CLUSTER'
+  - 'CLOUDSDK_CONTAINER_CLUSTER=$_STAGING_CLUSTER'
+
+- name: 'gcr.io/cloud-builders/gcloud'
+  id: Wait for QA Attestation
+  entrypoint: /bin/sh
+  timeout: 500s
+  args:
+  - '-c'
+  - |
+     FULLY_QUALIFIED_IMAGE=$(gcloud container images describe --format 'value(image_summary.fully_qualified_digest)' gcr.io/$PROJECT_ID/hello-app:$SHORT_SHA)
+     
+     until gcloud beta container binauthz attestations list --attestor=qa_attestor --artifact-url=$${FULLY_QUALIFIED_IMAGE} | grep qa_attestor; do
+       sleep 30
+     done
+
+- name: 'gcr.io/cloud-builders/kubectl'
+  id: Deploy to Production
+  args:
+  - 'apply'
+  - '-f'
+  - 'kubernetes'
+  env:
+  - 'CLOUDSDK_COMPUTE_ZONE=$_COMPUTE_ZONE'
+  - 'CLOUDSDK_CONTAINER_CLUSTER=$_PROD_CLUSTER'
