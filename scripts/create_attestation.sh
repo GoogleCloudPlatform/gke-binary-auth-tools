@@ -118,10 +118,4 @@ gcloud beta container binauthz attestations create \
     --pgp-key-fingerprint="$(cat ${NAME}.fpr)"
 
 # Clean up the keys and generated artifacts
-rm generated_signature.pgp
-rm generated_payload.json
-rm ${NAME}.fpr
-rm ${NAME}.pass
-rm ${NAME}.pass.enc
-rm ${NAME}.gpg
-rm ${NAME}.gpg.enc
+rm generated_signature.pgp generated_payload.json ${NAME}.fpr ${NAME}.pass ${NAME}.pass.enc ${NAME}.gpg ${NAME}.gpg.enc
