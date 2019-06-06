@@ -1,5 +1,10 @@
 # Binary Authorization Tools
 
+*Disclaimer: This is not an official Google product.*
+
+This project contains a set of tools to help with the implementation of Binary Authorization in Google
+Cloud.
+
 ## CVE Checker - cve-checker/main.go
 
 A Go program that parses the JSON output of the vulnerabilities for an image in Google
@@ -33,3 +38,14 @@ Options:
   -r <keyring name>    Name of the KMS keyring decryption key
   -k <key name>        Name of the KMS decryption key
 ```
+
+## Contributing
+
+See [CONTRIBUTING](https://github.com/GoogleCloudPlatform/binauthz-tools/blob/master/CONTRIBUTING)
+
+## License
+
+Copyright 2019, Google, Inc.
+Licensed under the pache License, Version 2.0
+
+See [LICENSE](https://github.com/GoogleCloudPlatform/binauthz-tools/blob/master/LICENSE).
