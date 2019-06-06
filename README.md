@@ -46,6 +46,6 @@ See [CONTRIBUTING](https://github.com/GoogleCloudPlatform/binauthz-tools/blob/ma
 ## License
 
 Copyright 2019, Google, Inc.
-Licensed under the pache License, Version 2.0
+Licensed under the Apache License, Version 2.0
 
 See [LICENSE](https://github.com/GoogleCloudPlatform/binauthz-tools/blob/master/LICENSE).
