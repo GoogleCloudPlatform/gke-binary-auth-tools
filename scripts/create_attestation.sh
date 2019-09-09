@@ -115,7 +115,7 @@ gcloud beta container binauthz attestations create \
     --artifact-url="${IMAGE_PATH}" \
     --attestor="projects/${PROJECT_ID}/attestors/${NAME}" \
     --signature-file=generated_signature.pgp \
-    --pgp-key-fingerprint="$(cat ${NAME}.fpr)"
+    --public-key-id="$(cat ${NAME}.fpr)"
 
 # Clean up the keys and generated artifacts
 rm generated_signature.pgp generated_payload.json ${NAME}.fpr ${NAME}.pass ${NAME}.pass.enc ${NAME}.gpg ${NAME}.gpg.enc
