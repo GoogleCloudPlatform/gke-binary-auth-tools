@@ -43,9 +43,16 @@ steps:
   args:
   - -xe
   - -c
-  - |
-     FULLY_QUALIFIED_IMAGE=$(gcloud container images describe --format 'value(image_summary.fully_qualified_digest)' gcr.io/$PROJECT_ID/hello-app:$SHORT_SHA)
-     /scripts/create_attestation.sh -n $_VULNZ_NOTE_ID -p $PROJECT_ID -i $$FULLY_QUALIFIED_IMAGE -b $PROJECT_ID-keys -r $_KMS_KEYRING  -k $_KMS_KEY
+  - |-
+      FQ_DIGEST=$(gcloud container images describe --format 'value(image_summary.fully_qualified_digest)' gcr.io/$PROJECT_ID/hello-app:$SHORT_SHA)
+      /scripts/create_attestation.sh \
+        -p "$PROJECT_ID" \
+        -i "$${FQ_DIGEST}" \
+        -a "$_VULNZ_ATTESTOR" \
+        -v "$_VULNZ_KMS_KEY_VERSION" \
+        -k "$_VULNZ_KMS_KEY" \
+        -l "$_KMS_LOCATION" \
+        -r "$_KMS_KEYRING"
 
 - name: 'gcr.io/cloud-builders/gcloud'
   id: 'Generate Kubernetes manifest'
