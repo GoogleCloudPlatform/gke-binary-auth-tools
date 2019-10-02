@@ -15,7 +15,7 @@
 steps:
 
 - name: 'gcr.io/cloud-builders/docker'
-  id: Build
+  id: 'Build application and container'
   args:
   - 'build'
   - '-t'
@@ -23,13 +23,13 @@ steps:
   - '.'
 
 - name: 'gcr.io/cloud-builders/docker'
-  id: Push Image to GCR
+  id: 'Push image to Container Registry'
   args:
   - 'push'
   - 'gcr.io/$PROJECT_ID/hello-app:$SHORT_SHA'
 
 - name: gcr.io/$PROJECT_ID/cloudbuild-attestor
-  id: Check Vulnerability Scan Results
+  id: 'Check Vulnerability Scan results'
   entrypoint: 'sh'
   args:
   - -xe
@@ -38,7 +38,7 @@ steps:
      /scripts/check_vulnerabilities.sh -p $PROJECT_ID -i gcr.io/$PROJECT_ID/hello-app:$SHORT_SHA -t 5
 
 - name: 'gcr.io/$PROJECT_ID/cloudbuild-attestor'
-  id: 'Attest'
+  id: 'Attest Vulnerability Scan'
   entrypoint: 'sh'
   args:
   - -xe
@@ -48,7 +48,7 @@ steps:
      /scripts/create_attestation.sh -n $_VULNZ_NOTE_ID -p $PROJECT_ID -i $$FULLY_QUALIFIED_IMAGE -b $PROJECT_ID-keys -r $_KMS_KEYRING  -k $_KMS_KEY
 
 - name: 'gcr.io/cloud-builders/gcloud'
-  id: Generate k8s manifest
+  id: 'Generate Kubernetes manifest'
   entrypoint: /bin/sh
   args:
   - '-c'
@@ -58,18 +58,15 @@ steps:
      sed "s/DIGEST/$${DIGEST}/g" > kubernetes/deployment.yaml
 
 - name: 'gcr.io/cloud-builders/kubectl'
-  id: Deploy to Staging
-  args:
-  - 'apply'
-  - '-f'
-  - 'kubernetes'
+  id: 'Deploy to staging'
+  args: ['apply', '-f', 'kubernetes/']
   env:
-  - 'CLOUDSDK_COMPUTE_ZONE=$_COMPUTE_ZONE'
+  - 'CLOUDSDK_COMPUTE_REGION=$_COMPUTE_REGION'
   - 'CLOUDSDK_CONTAINER_CLUSTER=$_STAGING_CLUSTER'
 
-# This effectively pauses the build for up to 500s until the QA attestion has been applied.
+# Clear the context - this is required until new gcloud and kubectl builders are
+# published which fix the caching bug.
 - name: 'gcr.io/cloud-builders/gcloud'
-  id: Wait for QA Attestation
   entrypoint: /bin/sh
   timeout: 500s
   args:
@@ -80,10 +77,14 @@ steps:
      until gcloud beta container binauthz attestations list --attestor=$_QA_NOTE_ID --artifact-url=$${FULLY_QUALIFIED_IMAGE} | grep $_QA_NOTE_ID; do
        sleep 30
      done
+  id: 'Clear staging context'
+  entrypoint: '/bin/bash'
+  args: ['-c', 'rm -rf ~/.config/gcloud ~/.kube']
 
-# Change to the prod-cluster context this is needed because the build previously used the staging-cluster context.
+# This effectively pauses the build for up to 500s until the QA attestion is
+# applied.
 - name: 'gcr.io/cloud-builders/gcloud'
-  id: Change to Prod Context
+  id: 'Await QA attestation'
   entrypoint: /bin/sh
   timeout: 500s
   args:
@@ -92,11 +93,15 @@ steps:
       gcloud container clusters get-credentials --project="$PROJECT_ID" --zone="$_COMPUTE_ZONE" "$_PROD_CLUSTER"
 
 - name: 'gcr.io/cloud-builders/kubectl'
-  id: Deploy to Production
-  args:
-  - 'apply'
-  - '-f'
-  - 'kubernetes'
+  id: 'Deploy to production'
+  args: ['apply', '-f', 'kubernetes/']
   env:
-  - 'CLOUDSDK_COMPUTE_ZONE=$_COMPUTE_ZONE'
+  - 'CLOUDSDK_COMPUTE_REGION=$_COMPUTE_REGION'
   - 'CLOUDSDK_CONTAINER_CLUSTER=$_PROD_CLUSTER'
+
+# Clear the context - this is required until new gcloud and kubectl builders are
+# published which fix the caching bug.
+- name: 'gcr.io/cloud-builders/gcloud'
+  id: 'Clear production context'
+  entrypoint: '/bin/bash'
+  args: ['-c', 'rm -rf ~/.config/gcloud ~/.kube']
