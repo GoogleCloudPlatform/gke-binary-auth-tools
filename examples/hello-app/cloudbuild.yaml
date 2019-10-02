@@ -59,10 +59,10 @@ steps:
   entrypoint: /bin/sh
   args:
   - '-c'
-  - |
-     DIGEST=$(gcloud container images describe --format 'value(image_summary.digest)' gcr.io/$PROJECT_ID/hello-app:$SHORT_SHA)
-     sed "s/GOOGLE_CLOUD_PROJECT/${PROJECT_ID}/g" kubernetes/deployment.yaml.tpl | \
-     sed "s/DIGEST/$${DIGEST}/g" > kubernetes/deployment.yaml
+  - |-
+      DIGEST=$(gcloud container images describe --format 'value(image_summary.digest)' gcr.io/$PROJECT_ID/hello-app:$SHORT_SHA)
+      sed "s/GOOGLE_CLOUD_PROJECT/${PROJECT_ID}/g" kubernetes/deployment.yaml.tpl | \
+      sed "s/DIGEST/$${DIGEST}/g" > kubernetes/deployment.yaml
 
 - name: 'gcr.io/cloud-builders/kubectl'
   id: 'Deploy to staging'
@@ -74,16 +74,6 @@ steps:
 # Clear the context - this is required until new gcloud and kubectl builders are
 # published which fix the caching bug.
 - name: 'gcr.io/cloud-builders/gcloud'
-  entrypoint: /bin/sh
-  timeout: 500s
-  args:
-  - '-c'
-  - |
-     FULLY_QUALIFIED_IMAGE=$(gcloud container images describe --format 'value(image_summary.fully_qualified_digest)' gcr.io/$PROJECT_ID/hello-app:$SHORT_SHA)
-     
-     until gcloud beta container binauthz attestations list --attestor=$_QA_NOTE_ID --artifact-url=$${FULLY_QUALIFIED_IMAGE} | grep $_QA_NOTE_ID; do
-       sleep 30
-     done
   id: 'Clear staging context'
   entrypoint: '/bin/bash'
   args: ['-c', 'rm -rf ~/.config/gcloud ~/.kube']
@@ -95,9 +85,38 @@ steps:
   entrypoint: /bin/sh
   timeout: 500s
   args:
+  - '-e'
   - '-c'
-  - |
-      gcloud container clusters get-credentials --project="$PROJECT_ID" --zone="$_COMPUTE_ZONE" "$_PROD_CLUSTER"
+  - |-
+      FULLY_QUALIFIED_IMAGE=$(gcloud container images describe --format 'value(image_summary.fully_qualified_digest)' gcr.io/$PROJECT_ID/hello-app:$SHORT_SHA)
+
+      cat <<EOF
+      Waiting for QA attestation... Attest the image with the following command:
+
+      gcloud beta container binauthz attestations sign-and-create \
+        --project "$PROJECT_ID" \
+        --artifact-url "$${FULLY_QUALIFIED_IMAGE}" \
+        --attestor "$_QA_ATTESTOR" \
+        --attestor-project "$PROJECT_ID" \
+        --keyversion "$_QA_KMS_KEY_VERSION" \
+        --keyversion-key "$_QA_KMS_KEY" \
+        --keyversion-location "$_KMS_LOCATION" \
+        --keyversion-keyring "$_KMS_KEYRING" \
+        --keyversion-project "$PROJECT_ID"
+
+      EOF
+
+      until gcloud beta container binauthz attestations list \
+        --project "$PROJECT_ID" \
+        --attestor "$_QA_ATTESTOR" \
+        --attestor-project "$PROJECT_ID" \
+        --artifact-url "$${FULLY_QUALIFIED_IMAGE}" \
+        2>&1 \
+        | grep -q "$_QA_KMS_KEY"
+      do
+        echo "Awaiting attestation..."
+        sleep 10
+      done
 
 - name: 'gcr.io/cloud-builders/kubectl'
   id: 'Deploy to production'
