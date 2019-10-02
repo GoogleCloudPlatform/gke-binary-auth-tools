@@ -14,13 +14,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+SCRIPT_NAME="${0##*/}"
+
 die() {
-  echo "${0##*/}: error: $*" >&2
+  echo "${SCRIPT_NAME}: $*" >&2
   exit 1
 }
 
 usage() {
-  echo "Usage: check_vulnerabilities.sh [options] [args]
+  echo "Usage: ${SCRIPT_NAME} [options] [args]
 
 Check if an image has CRITICAL vulnerabilities.
 
@@ -105,4 +107,3 @@ else
     echo "Scan returned CRITICAL Vulnerabilities for ${IMAGE_PATH}"
     exit 1
 fi
-
