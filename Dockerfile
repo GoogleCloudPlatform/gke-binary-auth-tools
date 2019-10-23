@@ -12,9 +12,26 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+FROM golang:1.13 as cve-checker-build
+
+ENV GO111MODULE=on \
+  CGO_ENABLED=0 \
+  GOOS=linux \
+  GOARCH=amd64
+
+WORKDIR /go/src/app
+COPY cve-checker .
+
+RUN go build \
+  -ldflags "-s -w -extldflags 'static'" \
+  -installsuffix cgo \
+  -tags netgo \
+  -o /bin/cve-checker \
+  .
+
+
 FROM gcr.io/cloud-builders/gcloud
-RUN apt-get update && apt-get install -y gnupg2 jq golang
-COPY cve-checker /root/go/src/cve-checker
-RUN cd /root/go/src/cve-checker && \
-    go build -o /usr/bin/cve-checker
+RUN apt-get update -qq && apt-get install -yqq jq
+
+COPY --from=cve-checker-build /bin/cve-checker /usr/bin/cve-checker
 COPY scripts/* /scripts/
