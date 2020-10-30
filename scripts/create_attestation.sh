@@ -108,7 +108,7 @@ ATTESTOR_PROJECT="${ATTESTOR_PROJECT:-${PROJECT_ID}}"
 KMS_PROJECT="${KMS_PROJECT:-${PROJECT_ID}}"
 
 # Verify that the image wasn't already attested.
-if gcloud beta container binauthz attestations list \
+if gcloud container binauthz attestations list \
       --artifact-url "${IMAGE_PATH}" \
       --attestor "${ATTESTOR}" \
       --attestor-project "${ATTESTOR_PROJECT}" \
@@ -121,7 +121,7 @@ then
 fi
 
 # Sign and create the attestation.
-gcloud alpha container binauthz attestations sign-and-create \
+gcloud beta container binauthz attestations sign-and-create \
   --project "${PROJECT_ID}" \
   --artifact-url "${IMAGE_PATH}" \
   --attestor "${ATTESTOR}" \
