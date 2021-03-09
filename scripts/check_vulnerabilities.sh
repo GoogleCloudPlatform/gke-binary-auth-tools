@@ -68,8 +68,12 @@ SLEEP_WAIT_FOR_SCAN=30
 NUM_WAITS=0
 MAX_WAITS=6
 
+IMAGE_LOCATION=$(echo ${IMAGE_PATH} | awk -F '[/:@]+' '{print $1;}')
+REPO_NAME=$(echo ${IMAGE_PATH} | awk -F '[/:@]+' '{print $3;}')
+DIGEST=$(gcloud beta container images describe ${IMAGE_PATH} --format='get(image_summary.digest)')
+
 # Wait for scan to begin
-until gcloud beta container images describe ${IMAGE_PATH} --format 'value(discovery_summary.discovery.discovered.analysisStatus)' --show-package-vulnerability || [ ${NUM_WAITS} -eq ${MAX_WAITS} ]; do
+until gcloud beta container images describe ${IMAGE_PATH} --format='value(discovery_summary.discovery.discovered.analysisStatus)' --show-package-vulnerability || [ ${NUM_WAITS} -eq ${MAX_WAITS} ]; do
   sleep ${SLEEP_WAIT_FOR_SCAN}
   ((NUM_WAITS++))
 done
@@ -80,12 +84,13 @@ fi
 
 NUM_WAITS=0
 # Wait for scan to complete
-SCAN_RESULTS=$(gcloud beta container images describe ${IMAGE_PATH} --show-package-vulnerability --format json)
-until echo $SCAN_RESULTS | jq '.discovery_summary.discovery[0].discovered.analysisStatus' | grep FINISHED_SUCCESS || [ ${NUM_WAITS} -eq ${MAX_WAITS} ]; do
+SCAN_RESULTS=$(gcloud beta container images describe ${IMAGE_LOCATION}/${PROJECT_ID}/${REPO_NAME}@${DIGEST} --show-package-vulnerability --format json)
+until echo ${SCAN_RESULTS} | jq '.discovery_summary.discovery[0].discovery.analysisStatus' | grep FINISHED_SUCCESS || [ ${NUM_WAITS} -eq ${MAX_WAITS} ]; do
     NUM_WAITS=$((NUM_WAITS + 1))
     echo "Waiting ${SLEEP_WAIT_FOR_SCAN}s for scan to complete"
     sleep ${SLEEP_WAIT_FOR_SCAN}
-    SCAN_RESULTS=$(gcloud beta container images describe ${IMAGE_PATH} --show-package-vulnerability --format json)
+    echo ${SCAN_RESULTS}
+    SCAN_RESULTS=$(gcloud beta container images describe ${IMAGE_LOCATION}/${PROJECT_ID}/${REPO_NAME}@${DIGEST} --show-package-vulnerability --format json)
 done
 
 if [ ${NUM_WAITS} -eq ${MAX_WAITS} ];then
