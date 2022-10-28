@@ -70,7 +70,7 @@ MAX_WAITS=6
 
 IMAGE_LOCATION=$(echo ${IMAGE_PATH} | awk -F '[/:@]+' '{print $1;}')
 REPO_NAME=$(echo ${IMAGE_PATH} | awk -F '[/:@]+' '{print $3;}')
-DIGEST=$(gcloud beta container images describe ${IMAGE_PATH} --format='get(image_summary.digest)')
+FULLY_QUALIFIED_DIGEST=$(gcloud beta container images describe ${IMAGE_PATH} --format='get(image_summary.fully_qualified_digest)')
 
 # Wait for scan to begin
 until gcloud beta container images describe ${IMAGE_PATH} --format='value(discovery_summary.discovery.discovered.analysisStatus)' --show-package-vulnerability || [ ${NUM_WAITS} -eq ${MAX_WAITS} ]; do
@@ -84,13 +84,13 @@ fi
 
 NUM_WAITS=0
 # Wait for scan to complete
-SCAN_RESULTS=$(gcloud beta container images describe ${IMAGE_LOCATION}/${PROJECT_ID}/${REPO_NAME}@${DIGEST} --show-package-vulnerability --format json)
+SCAN_RESULTS=$(gcloud beta container images describe ${FULLY_QUALIFIED_DIGEST} --show-package-vulnerability --format json)
 until echo ${SCAN_RESULTS} | jq '.discovery_summary.discovery[0].discovery.analysisStatus' | grep FINISHED_SUCCESS || [ ${NUM_WAITS} -eq ${MAX_WAITS} ]; do
     NUM_WAITS=$((NUM_WAITS + 1))
     echo "Waiting ${SLEEP_WAIT_FOR_SCAN}s for scan to complete"
     sleep ${SLEEP_WAIT_FOR_SCAN}
     echo ${SCAN_RESULTS}
-    SCAN_RESULTS=$(gcloud beta container images describe ${IMAGE_LOCATION}/${PROJECT_ID}/${REPO_NAME}@${DIGEST} --show-package-vulnerability --format json)
+    SCAN_RESULTS=$(gcloud beta container images describe ${FULLY_QUALIFIED_DIGEST} --show-package-vulnerability --format json)
 done
 
 if [ ${NUM_WAITS} -eq ${MAX_WAITS} ];then
@@ -99,7 +99,7 @@ fi
 
 IMAGE_NAME=$(echo ${IMAGE_PATH} | awk -F/ '{print $3}')
 echo "Check vulnerability scan results here:"
-echo "https://console.cloud.google.com/gcr/images/${PROJECT_ID}/GLOBAL/${IMAGE_NAME}/details?tab=vulnz"
+echo "https://console.cloud.google.com/artifacts?project=${PROJECT_ID}"
 
 # Check for CRITICAL vulnerabilities over our CVSS Score
 cat > vuln.json <<EOF

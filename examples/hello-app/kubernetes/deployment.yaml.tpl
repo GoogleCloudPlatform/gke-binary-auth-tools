@@ -32,6 +32,6 @@ spec:
     spec:
       containers:
       - name: hello-app
-        image: gcr.io/GOOGLE_CLOUD_PROJECT/hello-app@DIGEST
+        image: REGION-docker.pkg.dev/GOOGLE_CLOUD_PROJECT/applications/hello-app@DIGEST
         ports:
         - containerPort: 8080
