@@ -20,16 +20,19 @@ import (
 	"net/http"
 )
 
-func handler(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintf(w, "Hello World")
-}
-
-func hchandler(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintf(w, "ok")
-}
-
 func main() {
-	http.HandleFunc("/", handler)
-	http.HandleFunc("/_ah/health", hchandler)
-	log.Fatal(http.ListenAndServe(":8080", nil))
+	port := 8080
+
+	log.Printf("Starting up")
+
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		log.Printf("Received request from %s at %s", r.RemoteAddr, r.URL.EscapedPath())
+		fmt.Fprint(w, "Hello World")
+	})
+	http.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
+		log.Printf("Received health check from %s", r.RemoteAddr)
+		w.WriteHeader(http.StatusOK)
+	})
+	log.Printf("Starting server on port: %v", port)
+	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%v", port), nil))
 }

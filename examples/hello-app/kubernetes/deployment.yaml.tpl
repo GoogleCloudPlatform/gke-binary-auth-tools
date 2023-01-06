@@ -32,6 +32,13 @@ spec:
     spec:
       containers:
       - name: hello-app
-        image: gcr.io/GOOGLE_CLOUD_PROJECT/hello-app@DIGEST
+        image: REGION-docker.pkg.dev/GOOGLE_CLOUD_PROJECT/applications/hello-app@DIGEST
+        readinessProbe:
+          initialDelaySeconds: 1
+          periodSeconds: 1
+          httpGet:
+            path: /healthz
+            port: 8080
         ports:
-        - containerPort: 8080
+        - name: http
+          containerPort: 8080
