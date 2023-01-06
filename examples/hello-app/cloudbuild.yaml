@@ -35,7 +35,7 @@ steps:
   - -xe
   - -c
   - |
-     /scripts/check_vulnerabilities.sh -p $PROJECT_ID -i $_COMPUTE_REGION-docker.pkg.dev/$PROJECT_ID/applications/hello-app:$SHORT_SHA -t 5
+     /scripts/check_vulnerabilities.sh -p $PROJECT_ID -i $_COMPUTE_REGION-docker.pkg.dev/$PROJECT_ID/applications/hello-app:$SHORT_SHA -t 7
 
 - name: '$_COMPUTE_REGION-docker.pkg.dev/$PROJECT_ID/cloudbuild-helpers/attestor'
   id: 'Attest Vulnerability Scan'
@@ -62,7 +62,7 @@ steps:
   - |-
       DIGEST=$(gcloud container images describe --format 'value(image_summary.digest)' $_COMPUTE_REGION-docker.pkg.dev/$PROJECT_ID/applications/hello-app:$SHORT_SHA)
       sed "s/REGION/${_COMPUTE_REGION}/g" kubernetes/deployment.yaml.tpl | \
-      sed "s/GOOGLE_CLOUD_PROJECT/${PROJECT_ID}/g" kubernetes/deployment.yaml.tpl | \
+      sed "s/GOOGLE_CLOUD_PROJECT/${PROJECT_ID}/g" | \
       sed "s/DIGEST/$${DIGEST}/g" > kubernetes/deployment.yaml
 
 - name: 'gcr.io/cloud-builders/kubectl'

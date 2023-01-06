@@ -12,15 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM golang:1.13 as build
+FROM golang:1.19 as build
 
 WORKDIR /go/src/app
 COPY . .
 
-RUN go get -d -v ./...
-RUN CGO_ENABLED=0 GOOS=linux go install -v ./...
+RUN go mod download
+RUN CGO_ENABLED=0 go build -o /go/bin/app
 
-FROM gcr.io/distroless/static
-COPY --from=build /go/bin/app /app
-
+# Now copy it into our base image.
+FROM gcr.io/distroless/static-debian11
+COPY --from=build /go/bin/app /
 CMD ["/app"]
