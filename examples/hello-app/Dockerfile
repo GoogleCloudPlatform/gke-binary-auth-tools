@@ -17,7 +17,7 @@ FROM golang:1.19 as build
 WORKDIR /go/src/app
 COPY . .
 
-RUN go mod download
+RUN go mod init
 RUN CGO_ENABLED=0 go build -o /go/bin/app
 
 # Now copy it into our base image.
